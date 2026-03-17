@@ -1,5 +1,5 @@
 # SiliconMetaTrader5 🍏📈
-**Professional MetaTrader 5 Solution for macOS Silicon (M1/M2/M3)**
+**Professional MetaTrader 5 Solution for macOS Silicon M Series**
 
 🌍 **[Read in English](README.md)**
 
