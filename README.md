@@ -1,5 +1,5 @@
 # SiliconMetaTrader5 🍏📈
-**MetaTrader 5 Solution for macOS Silicon M* Series**
+**MetaTrader 5 Solution for macOS Silicon M Series**
 
 🇹🇷 **[Türkçe Oku](README_TR.md)**
 
