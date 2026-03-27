@@ -1,285 +1,219 @@
-# SiliconMetaTrader5 🍏📈
-**macOS Apple Silicon için MetaTrader 5 çözümü**
+<div align="center">
 
-🌍 **[Read in English](README.md)**
+# ⚡ SiliconMetaTrader5 🍏📈
+**macOS Apple Silicon için Ultimate MetaTrader 5 & Python Çözümü**
 
-**Developer:** Bahadir Umut Iscimen
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
+[![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1%2FM2%2FM3%2FM4&2FM5-black?style=for-the-badge&logo=apple&logoColor=white)]()
+[![Version](https://img.shields.io/badge/Version-1.2.0-brightgreen.svg?style=for-the-badge)]()
 
-> [!NOTE]
-> Açıklama: Bu proje bilgisayarınızdaki native MetaTrader 5 uygulamasının yerine geçmez.
-> macOS üzerinde Python iletişimi ve algoritmik işlem için Docker içinde ayrı, headless bir MT5 instance’ı çalıştırır.
-> Bu proje, MetaTrader 5’i macOS Silicon cihazlarda (Docker) sorunsuz çalıştırmak ve Python (client) ile profesyonel algoritmik trading yapmak için uçtan uca geliştirilmiştir.
-
-> [!CAUTION]
-> Kullanım amacı notu: Bu altyapı, strateji geliştirme, backtesting ve forward-testing süreçlerini macOS ortamında konforlu yönetmek için tasarlanmıştır.
-> Milisaniye hassasiyeti gerektiren, kritik veya yüksek sermayeli live (production) trading için emülasyon katmanı içermeyen native Windows fiziksel PC/server kiralamanız önerilir.
+**Geliştirici:** Bahadir Umut Iscimen | 🌍 **[Read in English](README.md)**
 
 ---
 
-## Bu repoda neler var?
+</div>
 
-- `docker/`: Wine + QEMU üzerinde MT5 runtime
-- `client/`: Python istemci paketi (`siliconmetatrader5`)
-- `tests/`: doğrulama scriptleri
+> [!NOTE]  
+> 💡 **Açıklama:** Bu proje bilgisayarınızdaki native MetaTrader 5 uygulamasının **yerine geçmez**. macOS üzerinde Python iletişimi ve algoritmik işlem için Docker içinde ayrı, headless (arayüzsüz arka plan) bir MT5 instance’ı çalıştırır. Bu proje, MT5’i macOS Silicon cihazlarda (Docker) sorunsuz çalıştırmak ve Python (istemci) ile profesyonel algoritmik trading yapmak için uçtan uca geliştirilmiştir.
+
+> [!CAUTION]  
+> ⚠️ **Kullanım Amacı ve Üretim (Production) Uyarısı:** Bu altyapı, strateji geliştirme, backtesting ve forward-testing süreçlerini macOS ortamında son derece konforlu yönetmek için tasarlanmıştır. Ancak, milisaniye hassasiyeti gerektiren, kritik veya yüksek sermayeli **canlı (live/production) trading** için emülasyon katmanı içermeyen, native Windows kurulu fiziksel bir PC veya sunucu kullanmanız kesinlikle önerilir.
 
 ---
 
+## 📦 Bu Repoda Neler Var?
 
-## Sistem Akış Diyagramı
+* 🐳 **`docker/`** : Wine + QEMU üzerinde çalışan yüksek performanslı MT5 runtime.
+* 🐍 **`client/`** : Özel Python istemci paketi (`siliconmetatrader5`).
+* 🧪 **`tests/`** : Doğrulama ve bağlantı sağlığı scriptleri.
+
+---
+
+## 🏗 Sistem Mimari ve Akış Diyagramı
+
+Apple Silicon, Docker Emülasyonu ve Python arasındaki köprünün görselleştirilmesi.
 
 ![Sistem Mimarisi](assets/system-arch.png)
 
-### Ekran Görüntüleri
-**Localhost (VNC) Üzerinde Çalışma:**
-![Localhost VNC](assets/localhost.png)
-
-**Python Veri Çekme:**
-![Veri Çekme](assets/fetch_data.png)
+### 📸 Ekran Görüntüleri
+<div align="center">
+  <img src="assets/localhost.png" width="45%" alt="Localhost VNC">
+  <img src="assets/fetch_data.png" width="45%" alt="Veri Çekme">
+  <br>
+  <i>Solda: Localhost (VNC) Üzerinde Çalışma | Sağda: Python ile Veri Çekme</i>
+</div>
 
 ---
 
-## Veri yöntemleri: senaryoya göre seçin
+## 📡 Veri Çekme Yöntemleri
 
-| Senaryo | Önerilen yöntem |
-|---|---|
-| Live monitor / güncel bar | `copy_rates_from_pos()` |
-| Backtest/history tarih aralığı | `copy_rates_from()` / `copy_rates_range()` |
+Senaryonuza uygun doğru yöntemi seçin:
 
+| 🎯 Senaryo | 🛠 Önerilen Yöntem |
+| :--- | :--- |
+| **Canlı (Live) Monitor / Güncel Bar** | `copy_rates_from_pos()` |
+| **Backtest / Geçmiş Tarih Aralığı** | `copy_rates_from()` / `copy_rates_range()` |
+
+**Örnek Uygulama:**
 ```python
-# live
+# 🟢 Canlı Veri Çekme
 live_rates = mt5.copy_rates_from_pos("EURUSD", mt5.TIMEFRAME_M5, 0, 500)
 
-# backtest/history
+# 🕒 Geçmiş Veri (Backtest)
 hist_rates = mt5.copy_rates_range("EURUSD", mt5.TIMEFRAME_M5, dt_from, dt_to)
 ```
 
 ---
 
-## Sıfırdan Kurulum (Zero-to-Hero)
+## 🚀 Sıfırdan Kurulum (Zero-to-Hero)
 
 Bu adımlarda bilgisayarınızda hiçbir şey kurulu değilmiş gibi ilerliyoruz.
 
-### 1) Hazırlık
-
-Terminal açın ve gerekli araçları kurun:
+### 1️⃣ Hazırlık
+Terminali açın ve temel araçları kurun:
 
 ```bash
-# 1) Homebrew kur (zaten kuruluysa atla)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# 1. Homebrew kur (zaten kuruluysa atla)
+/bin/bash -c "$(curl -fsSL [https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh](https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh))"
 
-# 2) Gerekli paketleri kur
+# 2. Gerekli emülasyon ve container paketlerini kur
 brew install colima docker qemu lima lima-additional-guestagents
 ```
 
-### 2) Motoru başlat (Colima)
-
-Apple Silicon üzerinde MT5 runtime bileşenlerinin doğru çalışması için Colima'yı x86_64 emülasyon ile başlatıyoruz.
+### 2️⃣ Emülasyon Motorunu Başlat (Colima)
+Apple Silicon üzerinde MT5 runtime bileşenlerinin doğru çalışması için Colima'yı **x86_64 emülasyon** ile başlatıyoruz.
 
 ```bash
-# Opsiyonel reset (yalnızca daha önce siliconmetatrader5 için colima kurduysanız
-# veya mevcut Colima durumu bozuk görünüyorsa)
+# Opsiyonel: Mevcut Colima durumu bozuksa sıfırlamak için
 # colima delete -f
 
 colima start --arch x86_64 --vm-type=qemu --cpu 4 --memory 8
 ```
 
-### 3) MT5 server'ı kur ve başlat
-
+### 3️⃣ MT5 Sunucusunu Kur ve Başlat 
 ```bash
 cd docker
 
-# Seçenek 1: Foreground (ilk kurulumda önerilir, logları canlı görürsünüz)
+# Seçenek A: Foreground (İlk kurulumda önerilir, logları canlı görürsünüz)
 docker compose up --build
 
-# Seçenek 2: Detached (sistem stabil olduktan sonra)
+# Seçenek B: Detached (Sistem stabil olduktan sonra arka planda çalıştırmak için)
 # docker compose up --build -d
 ```
 
-Notlar:
-- İlk build süresi yaklaşık 5-10 dakika sürebilir.
-- İlk açılışta siyah ekrandan MT5 ekranına geçiş 25-30 dakikayı bulabilir.
-- `docker compose up` foreground çalışıyorsa, `Ctrl+C` compose oturumunu ve container'ları durdurur.
-- Detached modda çalışıyorsanız `docker compose logs -f` kullanın; burada `Ctrl+C` sadece log akışını kapatır.
-- Görsel erişim: [http://localhost:6081/vnc.html](http://localhost:6081/vnc.html) (şifre: `123456`).
-- İlk aksiyon: MT5 açılınca `File > Open an Account` ile brokerınızı bulun ve bir kez manuel login olun.
-- Uyarı: Bilgisayarınızda Colima çalışıyor olsa bile Docker/MT5 container'ı durmuşsa, container'ı tekrar başlattığınızda MT5 yeniden login isteyebilir.
-- Bu terminali açık bırakın (veya yeni terminal sekmesinden devam edin).
+> [!IMPORTANT]
+> **Başlatma İçin Önemli Notlar:**
+> * ⏳ **Build Süresi:** İlk kurulum yaklaşık **5-10 dakika** sürebilir.
+> * 🖥 **Arayüzün Açılması:** İlk açılışta siyah ekrandan MT5 arayüzüne geçiş **25-30 dakikayı** bulabilir.
+> * 🌐 **Görsel Erişim:** [http://localhost:6081/vnc.html](http://localhost:6081/vnc.html) adresine gidin (Şifre: `123456`).
+> * 🔑 **İlk İşlem:** MT5 açıldığında `File > Open an Account` yolunu izleyerek brokerınızı bulun ve bir kez manuel giriş yapın.
+> * ⚠️ **Uyarı:** Colima çalışıyor olsa bile container durdurulursa, yeniden başlatıldığında MT5 tekrar giriş (login) isteyebilir.
 
-### 4) Python client kur
-
-Client paketini kur/güncelle:
-
+### 4️⃣ Python İstemcisini (Client) Kur
+Python ortamınızı yeni Docker instance'ına bağlayın:
 ```bash
 python3 -m pip install --upgrade "siliconmetatrader5==1.2.0"
 ```
 
-### 5) Bağlantıyı test et
-
+### 5️⃣ Bağlantıyı Test Et
+Veri akışının sorunsuz olduğunu doğrulamak için dahili testleri çalıştırın:
 ```bash
 python tests/test_fetch.py
 python tests/test_plot.py
 ```
-
-Terminalde bağlantı/veri akışı başarılı görünüyorsa kurulum tamamdır.
-
----
-
-## Karşılaşılan Zorluklar ve Çözümler
-
-Bu proje, macOS Silicon üzerinde x86 iş yükü çalıştırmanın pratik zorluklarını yönetmek için tasarlandı.
-
-- Mimari uyumsuzluk: çökme sorunları, Rosetta-only davranışına güvenmek yerine QEMU tabanlı tam x86_64 emülasyon (Colima) ile azaltıldı.
-- IPC timeout paternleri: emülasyon yükü altında Python-MT5 kopmaları yaşanabilir; istemci tarafında stabilite için retry odaklı davranış bulunur.
-- SSL/TLS uyumu: broker bağlantı güvenilirliği, gerekli Windows/Wine bağımlılıkları (winbind/sertifika bileşenleri gibi) dahil edilerek iyileştirildi.
+*Terminalde başarılı bağlantı ve veri çıktıları görüyorsanız, botlarınızı yazmaya hazırsınız! 🎉*
 
 ---
 
-## Gelişmiş Ayarlar (Timezone & Ekran)
+## ⚙️ Gelişmiş Ayarlar
 
-### Zaman dilimini değiştirme
-
-Varsayılan `Europe/Istanbul`. Değiştirmek için `docker/compose.yaml` dosyasını düzenleyin:
-
+### 🌍 Zaman Dilimini (Timezone) Değiştirme
+Varsayılan container zaman dilimi `Europe/Istanbul`'dur. Değiştirmek için `docker/compose.yaml` dosyasını düzenleyin:
 ```yaml
-# docker/compose.yaml
 environment:
-  - TZ=America/New_York  # veya UTC, Asia/Tokyo vb.
+  - TZ=America/New_York  # Seçenekler: UTC, Asia/Tokyo vb.
 ```
+*(Not: Bu ayar broker sunucu saatinizi **değiştirmez**. Yalnızca Linux/VNC katmanının saatini ayarlar.)*
 
-Referans: [Wikipedia Time Zone List](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
-
-### Ekran çözünürlüğü ve pencere davranışı
-
-`docker/start.sh` dosyasını düzenleyin:
-
+### 🖥 Ekran Çözünürlüğü ve Performans
+Görsel ayarları `docker/start.sh` dosyasından düzenleyebilirsiniz:
 ```bash
-# docker/start.sh
 # Çözünürlük örneği
 Xvfb :100 -ac -screen 0 1366x768x24 &
 
-# Pencere yöneticisi (opsiyonel)
+# Pencere yöneticisi (Opsiyonel - VNC akıcılığını bir miktar düşürebilir)
 # openbox &
 ```
+*Değişiklikleri uygulamak için:* `cd docker && docker compose up --build -d`
 
-Performans uyarısı: pencere yöneticisini (Openbox) açmak ek grafik yükü oluşturur; VNC akıcılığını bir miktar düşürebilir (gecikme artışı).
-
-Değişiklikleri uygulamak için:
-
-```bash
-cd docker && docker compose up --build -d
+### 📊 MT5 Geçmiş Derinliği (MaxBars)
+Ağır backtest işlemleri için daha derin bar geçmişine erişmek isterseniz `docker/mt5cfg.ini` dosyasını düzenleyin:
+```ini
+MaxBars=500000  # Seçenekler: 100000, 250000, 500000, 1000000
 ```
+*(Trade-off: Daha yüksek bellek/depolama kullanımı ve senkronizasyon süresinde hafif uzama.)*
 
 ---
 
-## MT5 Geçmiş Derinliği (MaxBars)
+## 💻 Örnek Kullanım
 
-Dosya: `docker/mt5cfg.ini`
-
-Aşağıdaki değeri:
-
-```ini
-MaxBars=5000
-```
-
-şu seçeneklerden birine çıkarabilirsiniz:
-
-- `100000`
-- `250000`
-- `500000`
-- `1000000`
-
-Etkisi:
-- Backtest/history akışlarında daha derin bar geçmişine erişim sağlanır.
-- Uzun lookback kullanan live hesaplamalarda da daha geniş veri penceresi elde edilir.
-
-Trade-off:
-- Daha yüksek bellek/depolama kullanımı ve daha yavaş başlangıç/senkron süresi olabilir.
-
-`MaxBars` değişiminden sonra container'ları yeniden build/restart edin:
-
-```bash
-cd docker && docker compose up --build -d
-```
-
-## Örnek kullanım
+Hemen veri çekmeye başlamak için hızlı bir taslak:
 
 ```python
+import pandas as pd
 from siliconmetatrader5 import MetaTrader5
 
+# Bridge'i Başlat
 mt5 = MetaTrader5(host="localhost", port=8001, keepalive=True)
 
 if not mt5.initialize():
-    raise RuntimeError("MT5 initialize failed")
+    raise RuntimeError("🚨 MT5 başlatılamadı!")
 
+# Canlı Veri Çekimi
 rates_live = mt5.copy_rates_from_pos("EURUSD", mt5.TIMEFRAME_M15, 0, 150)
-print(len(rates_live))
+print(pd.DataFrame(rates_live).tail())
 
-mt5.close()  # sadece bu sürecin bağlantısını kapatır
+# Güvenli Çıkış
+mt5.close()  # Sadece bu sürecin bağlantısını kapatır
 ```
 
 ---
 
-## Client v1.2.0 (Önemli)
+## 🆕 Client v1.2.0 Güncellemeleri (Önemli)
 
-### Python istemci güncelleme
+Sürümünüzü kontrol edin: `python3 -m pip show siliconmetatrader5`
 
-Bu sürümü almak için:
-
-```bash
-python3 -m pip install --upgrade "siliconmetatrader5==1.2.0"
-python3 -m pip show siliconmetatrader5
-```
-
-Beklenen: `Version: 1.2.0`
-
----
-
-### Ana davranış değişiklikleri
-
-1. `close()` ve `shutdown()` ayrımı
-- `close()` yalnızca bu sürecin bağlantısını kapatır.
-- `shutdown()` / `close(remote_shutdown=True)` uzak MT5 terminalini global kapatır.
-
-Bot1/Bot2/Bot3 pratik senaryosu:
-
-- Bot1 = monitor
-- Bot2 = trade
-- Bot3 = history/backtest
-
-Bot1/Bot2/Bot3 normal çıkışta sadece `close()` kullanmalıdır.
-Global kapatma sadece orchestrator süreç tarafından `shutdown()` (veya `close(remote_shutdown=True)`) ile yapılmalıdır.
-
-2. Timeout semantiği
-- `timeout` geriye uyumluluk için kabul edilir.
-- Aktif per-call timeout davranışı kaldırılmıştır.
-- Uzun süreli botlarda `keepalive=True` önerilir.
-
-3. Watchdog desteği
-- `start_watchdog(...)`, `stop_watchdog()`, `health_status()`
-- Donuk/yanıt vermeyen bridge durumunu tespit eder.
-
-4. Güvenilirlik iyileştirmeleri
-- wrapper’larda doğrudan remote call dispatch
-- normalize hata kodları (`TIMEOUT`, `RESULT_EXPIRED`, `CONNECTION_CLOSED`, `RPC_ERROR`)
-- `market_book_release(symbol)` argüman iletim düzeltmesi
+### 🛠 Temel İyileştirmeler
+1. **Bağlantı Döngüsü (`close` vs `shutdown`):**
+   * `close()` yalnızca mevcut sürecin bağlantısını koparır.
+   * `shutdown()` / `close(remote_shutdown=True)` uzak MT5 terminalini tamamen kapatır (Çoklu bot senaryolarında dikkatli kullanın).
+2. **Timeout Semantiği:** Aktif per-call (çağrı başı) timeout davranışı kaldırıldı. Uzun süreli çalışan botlar için `keepalive=True` kullanılması önerilir.
+3. **Watchdog Desteği:** Donuk/yanıt vermeyen köprü durumlarını tespit etmek için `start_watchdog(...)`, `stop_watchdog()` ve `health_status()` eklendi.
+4. **Güvenilirlik:** Wrapper'larda doğrudan uzak çağrı (remote call) yönlendirmesi, normalize edilmiş hata kodları (`TIMEOUT`, `CONNECTION_CLOSED`) ve `market_book_release(symbol)` argüman iletim düzeltmesi yapıldı.
 
 ---
 
-## Günlük rutin
+## 🛡 Karşılaşılan Zorluklar ve Mimari Çözümler
+* **Mimari Uyumsuzluk:** Rosetta tabanlı çökme sorunları (crash), tam **x86_64 emülasyonu (QEMU tabanlı Colima)** kullanılarak büyük ölçüde azaltıldı.
+* **IPC Timeout Paternleri:** Emülasyon yükü altında oluşabilecek Python-MT5 kopmalarını önlemek için istemci (client) tarafına "retry" (yeniden deneme) odaklı stabilite mekanizmaları eklendi.
+* **SSL/TLS Uyumu:** Broker bağlantı güvenilirliği, gerekli Windows/Wine bağımlılıklarının (winbind/sertifika bileşenleri) entegre edilmesiyle sağlandı.
 
-Başlat:
+---
 
+## 🔁 Günlük Rutin
+
+**▶️ Sistemi Başlatma:**
 ```bash
 if colima status 2>/dev/null | grep -q "colima is running"; then
-  echo "Colima already running"
+  echo "Colima zaten çalışıyor 🟢"
 else
   colima start
 fi
 cd docker && docker compose up -d
 ```
 
-Durdur:
-
+**⏹ Sistemi Güvenle Durdurma:**
 ```bash
 cd docker && docker compose down
 colima stop
@@ -287,32 +221,18 @@ colima stop
 
 ---
 
-## SSS
+## ❓ SSS (Sıkça Sorulan Sorular)
 
-**S: Bilgisayarı yeniden başlattım, ne çalıştırmalıyım?**
+**S: Mac'imi yeniden başlattım, ne çalıştırmalıyım?**
+> Reponun kök dizininde günlük başlatma scriptini çalıştırın. Önce Colima'nın başladığından emin olun, ardından Docker compose'u tetikleyin.
 
-Not: Aşağıdaki komutu repo kök dizininde çalıştırın; `cd docker` göreli yol kullanır.
+**S: MT5 ekranı VNC üzerinden siyah kalıyor, ne yapmalıyım?**
+> Colima'nın `QEMU/x86_64` modunda çalıştığını doğrulayın. Sistemi detached moddan çıkarıp terminalde `docker compose up --build` çalıştırarak olası başlatma hatalarını inceleyin.
 
-```bash
-if colima status 2>/dev/null | grep -q "colima is running"; then
-  echo "Colima already running"
-else
-  colima start
-fi
-cd docker && docker compose up -d
-```
+**S: MT5’i güvenli bir şekilde nasıl tamamen kapatırım?**
+> Container'ların düzgünce kapanması için `cd docker && docker compose down` çalıştırın.
 
-**S: MT5 ekranı siyah kalıyor, ne yapmalıyım?**
-
-C: Colima'nın QEMU/x86_64 modunda çalıştığını doğrulayın. Ayrıca hatayı görmek için detached `-d` yerine foreground debug modda başlatın:
-
-```bash
-colima status
-cd docker && docker compose up --build
-```
-
-**S: MT5’i güvenli nasıl durdururum?**
-
-```bash
-cd docker && docker compose down
-```
+---
+<div align="center">
+  <i>Apple Silicon algoritmik trade topluluğu için ☕ ve kod ile geliştirilmiştir.</i>
+</div>
