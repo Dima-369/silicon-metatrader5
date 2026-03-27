@@ -1,288 +1,218 @@
-# SiliconMetaTrader5 🍏📈
-**MetaTrader 5 solution for macOS Apple Silicon**
+<div align="center">
 
-🇹🇷 **[Türkçe Oku](README_TR.md)**
+# ⚡ SiliconMetaTrader5 🍏📈
+**Ultimate MetaTrader 5 & Python Solution for macOS Apple Silicon**
 
-**Developer:** Bahadir Umut Iscimen
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
+[![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1%2FM2%2FM3%2FM4%2FM5-black?style=for-the-badge&logo=apple&logoColor=white)]()
+[![Version](https://img.shields.io/badge/Version-1.2.0-brightgreen.svg?style=for-the-badge)]()
 
-> [!NOTE]
-> Clarification: This project does **NOT** replace the native MetaTrader 5 application installed on your computer.
-> It runs a separate, headless MT5 instance via Docker to enable Python communication and algorithmic trading on macOS.
-> This project is an end-to-end solution developed to run MetaTrader 5 seamlessly on macOS Silicon devices (Docker) and to perform professional algorithmic trading with Python (client).
-
-> [!CAUTION]
-> Important usage purpose: This infrastructure is designed to make strategy development, backtesting, and forward-testing comfortable in the macOS environment.
-> For live (production) trading that requires millisecond precision, is critical, or involves high capital, using a physical PC or server with native Windows (no emulation layer) is recommended.
+**Developer:** Bahadir Umut Iscimen | 🇹🇷 **[Türkçe Oku](README_TR.md)**
 
 ---
 
-## What this repo contains
+</div>
 
-- `docker/`: MT5 runtime on Wine + QEMU
-- `client/`: Python client package (`siliconmetatrader5`)
-- `tests/`: validation scripts
+> [!NOTE]  
+> 💡 **Clarification:** This project does **NOT** replace the native MetaTrader 5 application installed on your computer. It runs a separate, headless MT5 instance via Docker to enable Python communication and algorithmic trading on macOS. This is an end-to-end solution developed to run MT5 seamlessly on macOS Silicon devices and to perform professional algorithmic trading with a Python client.
+
+> [!CAUTION]  
+> ⚠️ **Usage Purpose & Production Warning:** This infrastructure is designed to make strategy development, backtesting, and forward-testing incredibly comfortable in the macOS environment. However, for **live (production) trading** that requires millisecond precision or involves high capital, using a physical PC or server with native Windows (no emulation layer) is strictly recommended.
 
 ---
 
+## 📦 What's Inside This Repository?
 
-## System Workflow Diagram
+* 🐳 **`docker/`** : High-performance MT5 runtime built on Wine + QEMU.
+* 🐍 **`client/`** : Custom Python client package (`siliconmetatrader5`).
+* 🧪 **`tests/`** : Validation and connection health scripts.
+
+---
+
+## 🏗 System Architecture & Workflow
+
+Visualizing the bridge between Apple Silicon, Docker Emulation, and Python.
 
 ![System Architecture](assets/system-arch.png)
 
-### Screenshots
-**Running on Localhost (VNC):**
-![Localhost VNC](assets/localhost.png)
-
-**Python Data Fetching:**
-![Data Fetch](assets/fetch_data.png)
+### 📸 Screenshots
+<div align="center">
+  <img src="assets/localhost.png" width="45%" alt="Localhost VNC">
+  <img src="assets/fetch_data.png" width="45%" alt="Data Fetch">
+  <br>
+  <i>Left: Running on Localhost (VNC) | Right: Python Data Fetching</i>
+</div>
 
 ---
 
-## Data methods: choose by use case
+## 📡 Data Retrieval Methods
 
-| Use case | Recommended method |
-|---|---|
-| Live monitor / fresh bars | `copy_rates_from_pos()` |
-| Backtest/history by date range | `copy_rates_from()` / `copy_rates_range()` |
+Choose the right method for your specific trading/backtesting scenario:
 
+| 🎯 Use Case | 🛠 Recommended Method |
+| :--- | :--- |
+| **Live Monitor / Fresh Bars** | `copy_rates_from_pos()` |
+| **Backtest / Historic Data** | `copy_rates_from()` / `copy_rates_range()` |
+
+**Example Implementation:**
 ```python
-# live
+# 🟢 Live Data Fetching
 live_rates = mt5.copy_rates_from_pos("EURUSD", mt5.TIMEFRAME_M5, 0, 500)
 
-# backtest/history
+# 🕒 Historical Backtesting
 hist_rates = mt5.copy_rates_range("EURUSD", mt5.TIMEFRAME_M5, dt_from, dt_to)
 ```
 
 ---
 
-## Zero-to-Hero Setup
+## 🚀 Zero-to-Hero Setup Guide
 
-We proceed assuming nothing is installed on your computer.
+Starting from scratch? Follow these steps to get your automated trading engine running on macOS.
 
-### 1) Preparation
-
-Open Terminal and install required tools:
+### 1️⃣ Preparation
+Open your Terminal and install the foundational tools:
 
 ```bash
-# 1) Install Homebrew (skip if already installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# 1. Install Homebrew (skip if you already have it)
+/bin/bash -c "$(curl -fsSL [https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh](https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh))"
 
-# 2) Install required packages
+# 2. Install Emulation & Container required packages
 brew install colima docker qemu lima lima-additional-guestagents
 ```
 
-### 2) Start the engine (Colima)
-
-We use Colima with x86_64 emulation so Docker can run MT5 runtime components correctly on Apple Silicon.
+### 2️⃣ Start the Emulation Engine (Colima)
+We configure Colima with **x86_64 emulation** to ensure Docker handles MT5 seamlessly on Apple Silicon.
 
 ```bash
-# Optional reset (only if you previously installed colima for siliconmetatrader5,
-# or if your current Colima state looks broken)
+# Optional: Reset if Colima state is broken
 # colima delete -f
 
 colima start --arch x86_64 --vm-type=qemu --cpu 4 --memory 8
 ```
 
-### 3) Install and start MT5 server
-
+### 3️⃣ Initialize the MT5 Server 
 ```bash
 cd docker
 
-# Option 1: Foreground (recommended for first setup, you see live logs)
+# Option A: Foreground (See live logs - Recommended for first setup)
 docker compose up --build
 
-# Option 2: Detached (after system is stable)
+# Option B: Detached (Run in background once stable)
 # docker compose up --build -d
 ```
 
-Notes:
-- First build can take about 5-10 minutes.
-- During first initialization, transition from black screen to MT5 screen can take 25-30 minutes.
-- If you run `docker compose up` in foreground, `Ctrl+C` stops the compose session and containers.
-- If you run detached mode, use `docker compose logs -f`; then `Ctrl+C` only exits log streaming.
-- Visual access: [http://localhost:6081/vnc.html](http://localhost:6081/vnc.html) (password: `123456`).
-- First action: when MT5 opens, go to `File > Open an Account`, find your broker, and log in manually once.
-- Warning: even if Colima is still running, if the Docker/MT5 container is stopped, restarting the container may require MT5 login again.
-- Keep that terminal open (or continue in a new terminal tab).
+> [!IMPORTANT]
+> **Key Notes for Initialization:**
+> * ⏳ **Build Time:** The first build takes roughly **5-10 minutes**.
+> * 🖥 **Booting UI:** Transitioning from a black screen to the MT5 interface may take **25-30 minutes** during the very first run.
+> * 🌐 **Visual Access:** Go to [http://localhost:6081/vnc.html](http://localhost:6081/vnc.html) (Password: `123456`).
+> * 🔑 **First Action:** Navigate to `File > Open an Account`, search for your broker, and log in manually. 
 
-### 4) Install Python client
-
-Install/update the client package:
-
+### 4️⃣ Install the Python Client
+Link your Python environment to the new Docker instance:
 ```bash
 python3 -m pip install --upgrade "siliconmetatrader5==1.2.0"
 ```
 
-### 5) Test the connection
-
+### 5️⃣ Verify Connection
+Run the built-in tests to ensure smooth data flow:
 ```bash
 python tests/test_fetch.py
 python tests/test_plot.py
 ```
-
-If terminal outputs show successful connection/data flow, setup is complete.
-
----
-
-## Challenges Encountered and Solutions
-
-This project is designed to handle practical challenges of running x86 workloads on macOS Silicon.
-
-- Architecture mismatch: crash issues were mitigated by using QEMU-based full x86_64 emulation (Colima) instead of relying on Rosetta-only behavior.
-- IPC timeout patterns: Python-to-MT5 disconnections can happen under emulation pressure; the client side includes retry-oriented behavior for stability.
-- SSL/TLS compatibility: broker communication reliability was improved by including required Windows/Wine dependencies (such as winbind/certificate-related components).
+*If your terminal displays a successful connection and outputs data, you are ready to build your bots! 🎉*
 
 ---
 
-## Advanced Settings (Timezone & Screen)
+## ⚙️ Advanced Configuration
 
-### Change timezone
-
-Default is `Europe/Istanbul`. To change it, edit `docker/compose.yaml`:
-
+### 🌍 Timezone Customization
+The default container timezone is `Europe/Istanbul`. To change this, edit `docker/compose.yaml`:
 ```yaml
-# docker/compose.yaml
 environment:
-  - TZ=America/New_York  # or UTC, Asia/Tokyo, etc.
+  - TZ=America/New_York  # Options: UTC, Asia/Tokyo, etc.
 ```
+*(Note: This alters the Linux container VNC layer, **not** your broker's server time.)*
 
-Note: This setting does **not** change your broker server time. It only changes the Linux/container (VNC layer) timezone.
-
-Reference: [Wikipedia Time Zone List](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
-
-### Screen resolution and window behavior
-
-Edit `docker/start.sh`:
-
+### 🖥 Screen Resolution & Performance
+Adjust visual settings in `docker/start.sh`:
 ```bash
-# docker/start.sh
-# Resolution example
+# Resolution setup
 Xvfb :100 -ac -screen 0 1366x768x24 &
 
-# Window manager (optional)
+# Window Manager (Optional - May increase VNC latency)
 # openbox &
 ```
+*Apply changes:* `cd docker && docker compose up --build -d`
 
-Performance warning: enabling a window manager (Openbox) adds graphics overhead and may slightly reduce VNC smoothness (higher latency).
-
-Apply changes with:
-
-```bash
-cd docker && docker compose up --build -d
+### 📊 MT5 History Depth (MaxBars)
+To access deeper bar history for heavy backtesting, edit `docker/mt5cfg.ini`:
+```ini
+MaxBars=500000  # Options: 100000, 250000, 500000, 1000000
 ```
+*(Trade-off: Higher memory usage and slightly slower startup sync.)*
 
 ---
 
-## MT5 History Depth (MaxBars)
+## 💻 Example Usage
 
-File: `docker/mt5cfg.ini`
-
-You can increase:
-
-```ini
-MaxBars=5000
-```
-
-to one of these values:
-
-- `100000`
-- `250000`
-- `500000`
-- `1000000`
-
-Effect:
-- Backtest/history flows can access deeper bar history.
-- Live systems that use long lookback calculations can also benefit from wider available history.
-
-Trade-off:
-- Higher memory/storage usage and potentially slower startup/sync time.
-
-After changing `MaxBars`, rebuild/restart containers:
-
-```bash
-cd docker && docker compose up --build -d
-```
-
-## Example usage
+A quick boilerplate to start fetching data instantly:
 
 ```python
-from siliconmetatrader5 import MetaTrader5
 import pandas as pd
+from siliconmetatrader5 import MetaTrader5
 
+# Initialize Bridge
 mt5 = MetaTrader5(host="localhost", port=8001, keepalive=True)
 
 if not mt5.initialize():
-    raise RuntimeError("MT5 initialize failed")
+    raise RuntimeError("🚨 MT5 initialization failed!")
 
+# Fetch Live Data
 rates_live = mt5.copy_rates_from_pos("EURUSD", mt5.TIMEFRAME_M15, 0, 150)
 print(pd.DataFrame(rates_live).tail())
 
-mt5.close()  # closes only this process connection
+# Graceful Exit
+mt5.close() 
 ```
 
 ---
 
-## Client v1.2.0 (Important)
+## 🆕 Client v1.2.0 Updates (Important)
 
-### Install / Upgrade Python client
+Check your version: `python3 -m pip show siliconmetatrader5`
 
-To receive this release, run:
-
-```bash
-python3 -m pip install --upgrade "siliconmetatrader5==1.2.0"
-python3 -m pip show siliconmetatrader5
-```
-
-Expected: `Version: 1.2.0`
-
----
-
-### Main behavior changes
-
-1. `close()` vs `shutdown()`
-- `close()` only closes this process client connection.
-- `shutdown()` / `close(remote_shutdown=True)` stops the remote MT5 terminal globally.
-
-Bot1/Bot2/Bot3 practical scenario:
-
-- Bot1 = monitor
-- Bot2 = trade
-- Bot3 = history/backtest
-
-Normal exits for Bot1/Bot2/Bot3 must use `close()` only.
-Global stop should be done only by an orchestrator process using `shutdown()` (or `close(remote_shutdown=True)`).
-
-2. Timeout semantics
-- `timeout` is accepted for backward compatibility.
-- Active per-call timeout behavior is removed.
-- For long-running bots use `keepalive=True`.
-
-3. Watchdog support
-- `start_watchdog(...)`, `stop_watchdog()`, `health_status()`
-- Detects frozen/unresponsive bridge conditions.
-
-4. Reliability improvements
-- direct remote call dispatch in wrappers
-- normalized bridge errors (`TIMEOUT`, `RESULT_EXPIRED`, `CONNECTION_CLOSED`, `RPC_ERROR`)
-- `market_book_release(symbol)` forwarding fix
+### 🛠 Core Improvements
+1. **Connection Lifecycle (`close` vs `shutdown`):**
+   * `close()` disconnects the current process.
+   * `shutdown()` completely stops the remote MT5 terminal (Use carefully in multi-bot setups).
+2. **Timeout Semantics:** Active per-call timeout is removed. Use `keepalive=True` for long-running bots.
+3. **Watchdog Support:** New methods `start_watchdog(...)`, `stop_watchdog()`, and `health_status()` added to detect frozen bridges.
+4. **Reliability:** Direct remote call dispatch, normalized error codes (`TIMEOUT`, `CONNECTION_CLOSED`), and `market_book_release` forwarding fixes.
 
 ---
 
-## Daily routine
+## 🛡 Challenges & Architectural Solutions
+* **Architecture Mismatch:** Mitigated crash loops by enforcing QEMU-based full `x86_64` emulation instead of Rosetta.
+* **IPC Timeout Patterns:** Integrated retry-oriented behavior in the Python client to counter emulation pressure.
+* **SSL/TLS Compatibility:** Embedded necessary Windows/Wine dependencies for secure, reliable broker communication.
 
-Start:
+---
 
+## 🔁 Daily Routine Checklist
+
+**▶️ Start the System:**
 ```bash
 if colima status 2>/dev/null | grep -q "colima is running"; then
-  echo "Colima already running"
+  echo "Colima is ready 🟢"
 else
   colima start
 fi
 cd docker && docker compose up -d
 ```
 
-Stop:
-
+**⏹ Stop the System Safely:**
 ```bash
 cd docker && docker compose down
 colima stop
@@ -290,32 +220,18 @@ colima stop
 
 ---
 
-## FAQ
+## ❓ FAQ (Frequently Asked Questions)
 
 **Q: I rebooted my Mac, what do I run?**
+> Run the start script from the repository root. Make sure Colima starts first, then launch Docker compose.
 
-Note: Run the command from the repository root; `cd docker` is a relative path.
+**Q: My MT5 screen stays black via VNC. What do I do?**
+> Ensure Colima is running in `QEMU/x86_64` mode. Stop detached mode and run `docker compose up --build` in the foreground to monitor error logs.
 
-```bash
-if colima status 2>/dev/null | grep -q "colima is running"; then
-  echo "Colima already running"
-else
-  colima start
-fi
-cd docker && docker compose up -d
-```
+**Q: How do I cleanly stop everything?**
+> Run `cd docker && docker compose down` and let the containers terminate gracefully before shutting down Colima.
 
-**Q: MT5 screen stays black?**
-
-A: Make sure Colima is running in QEMU/x86_64 mode. Also start in foreground debug mode (not detached `-d`) to see startup errors:
-
-```bash
-colima status
-cd docker && docker compose up --build
-```
-
-**Q: How do I stop MT5 safely?**
-
-```bash
-cd docker && docker compose down
-```
+---
+<div align="center">
+  <i>Built with ☕ and code for the Apple Silicon algorithmic trading community.</i>
+</div>
