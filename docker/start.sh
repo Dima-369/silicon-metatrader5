@@ -41,15 +41,38 @@ fi
 MT5_DIR=$(dirname "$MT5_EXE")
 echo "Found MT5 at: $MT5_DIR"
 
-mv "/siliconmt5/mt5cfg.ini" "$MT5_DIR/"
+# mt5cfg sync policy:
+# - First boot: seed config.
+# - Subsequent boots: overwrite ONLY if image mt5cfg changed (build update).
+CFG_SRC="/siliconmt5/mt5cfg.ini"
+CFG_DST="$MT5_DIR/mt5cfg.ini"
+CFG_HASH_FILE="/opt/wineprefix/.mt5cfg_image.sha256"
+CFG_SRC_HASH="$(sha256sum "$CFG_SRC" | awk '{print $1}')"
+CFG_LAST_HASH=""
+if [ -f "$CFG_HASH_FILE" ]; then
+  CFG_LAST_HASH="$(cat "$CFG_HASH_FILE" 2>/dev/null || true)"
+fi
+
+if [ ! -f "$CFG_DST" ]; then
+  cp "$CFG_SRC" "$CFG_DST"
+  echo "$CFG_SRC_HASH" > "$CFG_HASH_FILE"
+  echo "Seeded default mt5cfg.ini (first boot)"
+elif [ "$CFG_SRC_HASH" != "$CFG_LAST_HASH" ]; then
+  cp "$CFG_SRC" "$CFG_DST"
+  echo "$CFG_SRC_HASH" > "$CFG_HASH_FILE"
+  echo "Applied updated mt5cfg.ini from image (build change detected)"
+else
+  echo "Keeping existing mt5cfg.ini (no build-time config change detected)"
+fi
+
 cd "$MT5_DIR"
 wine terminal64.exe /portable /config:mt5cfg.ini &
 echo "Waiting 15s for MT5 Windows to instantiate..."
 sleep 15
 
-# Start the Silicon Bridge (Python Interface)
+# Start the Silicon Bridge (Python Interface) - v1.0 style
 cd /siliconmt5
-wine python -m siliconmetatrader5 --host $MT5_HOST --port 8001 C:/Python/python.exe &
+wine python -m siliconmetatrader5 --host "$MT5_HOST" --port 8001 C:/Python/python.exe &
 echo "Waiting 30s for MT5 Silicon to instantiate..."
 sleep 30
 

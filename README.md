@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 [![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1%2FM2%2FM3%2FM4%2FM5-black?style=for-the-badge&logo=apple&logoColor=white)]()
-[![Version](https://img.shields.io/badge/Version-1.2.0-brightgreen.svg?style=for-the-badge)]()
+[![Version](https://img.shields.io/badge/Version-1.2.1-brightgreen.svg?style=for-the-badge)]()
 
 **Developer:** Bahadir Umut Iscimen | 🇹🇷 **[Türkçe Oku](README_TR.md)**
 
@@ -108,11 +108,12 @@ docker compose up --build
 > * 🖥 **Booting UI:** Transitioning from a black screen to the MT5 interface may take **25-30 minutes** during the very first run.
 > * 🌐 **Visual Access:** Go to [http://localhost:6081/vnc.html](http://localhost:6081/vnc.html) (Password: `123456`).
 > * 🔑 **First Action:** Navigate to `File > Open an Account`, search for your broker, and log in manually. 
+> * 📊 **Data Sync Warning:** After broker login, historical bars are loaded in the background. Wait **5-10 minutes** before running tests/bots; seeing `No data` in the first minutes is normal. The larger your `MaxBars` value is, the longer this initial sync can take.
 
 ### 4️⃣ Install the Python Client
 Link your Python environment to the new Docker instance:
 ```bash
-python3 -m pip install --upgrade "siliconmetatrader5==1.2.0"
+python3 -m pip install --upgrade siliconmetatrader5
 ```
 
 ### 5️⃣ Verify Connection
@@ -179,7 +180,7 @@ mt5.close()
 
 ---
 
-## 🆕 Client v1.2.0 Updates (Important)
+## 🆕 Client Updates (Important)
 
 Check your version: `python3 -m pip show siliconmetatrader5`
 

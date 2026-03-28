@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 [![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1%2FM2%2FM3%2FM4&2FM5-black?style=for-the-badge&logo=apple&logoColor=white)]()
-[![Version](https://img.shields.io/badge/Version-1.2.0-brightgreen.svg?style=for-the-badge)]()
+[![Version](https://img.shields.io/badge/Version-1.2.1-brightgreen.svg?style=for-the-badge)]()
 
 **Geliştirici:** Bahadir Umut Iscimen | 🌍 **[Read in English](README.md)**
 
@@ -108,12 +108,13 @@ docker compose up --build
 > * 🖥 **Arayüzün Açılması:** İlk açılışta siyah ekrandan MT5 arayüzüne geçiş **25-30 dakikayı** bulabilir.
 > * 🌐 **Görsel Erişim:** [http://localhost:6081/vnc.html](http://localhost:6081/vnc.html) adresine gidin (Şifre: `123456`).
 > * 🔑 **İlk İşlem:** MT5 açıldığında `File > Open an Account` yolunu izleyerek brokerınızı bulun ve bir kez manuel giriş yapın.
+> * 📊 **Veri Senkron Uyarısı:** Broker girişinden sonra geçmiş bar verileri arka planda yüklenir. Test/bot başlatmadan önce **5-10 dakika** bekleyin; ilk dakikalarda `No data` görmek normaldir. `MaxBars` değeri ne kadar büyükse bu ilk senkron süresi o kadar uzayabilir.
 > * ⚠️ **Uyarı:** Colima çalışıyor olsa bile container durdurulursa, yeniden başlatıldığında MT5 tekrar giriş (login) isteyebilir.
 
 ### 4️⃣ Python İstemcisini (Client) Kur
 Python ortamınızı yeni Docker instance'ına bağlayın:
 ```bash
-python3 -m pip install --upgrade "siliconmetatrader5==1.2.0"
+python3 -m pip install --upgrade siliconmetatrader5
 ```
 
 ### 5️⃣ Bağlantıyı Test Et
@@ -180,7 +181,7 @@ mt5.close()  # Sadece bu sürecin bağlantısını kapatır
 
 ---
 
-## 🆕 Client v1.2.0 Güncellemeleri (Önemli)
+## 🆕 Client Güncellemeleri (Önemli)
 
 Sürümünüzü kontrol edin: `python3 -m pip show siliconmetatrader5`
 

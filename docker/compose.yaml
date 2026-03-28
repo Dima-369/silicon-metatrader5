@@ -12,7 +12,17 @@ services:
       - 5901:5901
       - 6081:6081
       - 8001:8001
-    restart: "no"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python3 -c \"import socket,sys;s=socket.socket();s.settimeout(1);rc=s.connect_ex(('127.0.0.1',8001));s.close();sys.exit(0 if rc==0 else 1)\""
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
     init: true
     stdin_open: true
     tty: true
@@ -21,7 +31,7 @@ services:
     security_opt:
       - seccomp:unconfined
     volumes:
-      - mt5_persistence:/opt/wineprefix/drive_c/Program Files/MetaTrader 5
+      - wineprefix_persistence:/opt/wineprefix
 
 volumes:
-  mt5_persistence:
+  wineprefix_persistence:
