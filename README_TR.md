@@ -151,7 +151,7 @@ Xvfb :100 -ac -screen 0 1366x768x24 &
 ### 📊 MT5 Geçmiş Derinliği (MaxBars)
 Ağır backtest işlemleri için daha derin bar geçmişine erişmek isterseniz `docker/mt5cfg.ini` dosyasını düzenleyin:
 ```ini
-MaxBars=500000  # Seçenekler: 100000, 250000, 500000, 1000000
+MaxBars=5000  # Seçenekler: 500000, 100000, 250000, 500000, 1000000
 ```
 *(Trade-off: Daha yüksek bellek/depolama kullanımı ve senkronizasyon süresinde hafif uzama.)*
 
@@ -234,6 +234,18 @@ colima stop
 > Container'ların düzgünce kapanması için `cd docker && docker compose down` çalıştırın.
 
 ---
+
+## ☕ Projeye Destek Olun
+
+Bu proje size zaman kazandırıyorsa veya trading workflow'unuza katkı sağlıyorsa, TRC20 ağında USDT ile destek olabilirsiniz.
+
+**☕ USDT (TRC20) ile destek olun**
+```text
+TMh8eS5EPRL77Z7L4KhsKmccSNLgf6Rfta
+```
+
+---
+
 <div align="center">
   <i>Apple Silicon algoritmik trade topluluğu için ☕ ve kod ile geliştirilmiştir.</i>
 </div>

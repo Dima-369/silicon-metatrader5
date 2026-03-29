@@ -150,7 +150,7 @@ Xvfb :100 -ac -screen 0 1366x768x24 &
 ### 📊 MT5 History Depth (MaxBars)
 To access deeper bar history for heavy backtesting, edit `docker/mt5cfg.ini`:
 ```ini
-MaxBars=500000  # Options: 100000, 250000, 500000, 1000000
+MaxBars=5000  # Options: 500000, 100000, 250000, 500000, 1000000
 ```
 *(Trade-off: Higher memory usage and slightly slower startup sync.)*
 
@@ -233,6 +233,17 @@ colima stop
 > Run `cd docker && docker compose down` and let the containers terminate gracefully before shutting down Colima.
 
 ---
+
+## ☕ Support the Project
+
+If this project saves you time or contributes to your trading workflow, you can support it with USDT on the TRC20 network.
+
+**☕ Support via USDT (TRC20)**
+```text
+TMh8eS5EPRL77Z7L4KhsKmccSNLgf6Rfta
+```
+---
+
 <div align="center">
   <i>Built with ☕ and code for the Apple Silicon algorithmic trading community.</i>
 </div>
