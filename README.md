@@ -95,6 +95,8 @@ colima start --arch x86_64 --vm-type=qemu --cpu 4 --memory 8
 ```bash
 cd docker
 
+docker context use colima
+
 # Option A: Foreground (See live logs - Recommended for first setup)
 docker compose up --build
 
