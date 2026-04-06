@@ -14,7 +14,8 @@ RUN apt-get update && \
 COPY requirements.txt ./
 ENV XDG_RUNTIME_DIR=/tmp/runtime-root
 RUN mkdir -p /tmp/runtime-root && chmod 700 /tmp/runtime-root && \
-    xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" wine pip install -r requirements.txt
+    xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
+    wine pip install -r requirements.txt
 
 RUN curl -L -o winetricks https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks && \
     chmod +x winetricks && \
