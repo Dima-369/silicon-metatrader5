@@ -6,7 +6,7 @@ WORKDIR /siliconmt5
 
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends cabextract xvfb x11vnc procps curl unzip python3-websockify python3-numpy openbox tzdata && \
+    apt-get install -y --no-install-recommends cabextract xvfb x11vnc procps curl unzip python3-websockify python3-numpy python3-rpyc iproute2 openbox tzdata && \
     apt-get clean && \
     curl -L -o noVNC.zip https://github.com/novnc/noVNC/archive/refs/heads/master.zip && unzip noVNC.zip && rm noVNC.zip && \
     rm -rf /var/lib/apt/lists/*

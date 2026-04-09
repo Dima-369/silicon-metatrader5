@@ -5,8 +5,8 @@
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
-[![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1%2FM2%2FM3%2FM4&2FM5-black?style=for-the-badge&logo=apple&logoColor=white)]()
-[![Version](https://img.shields.io/badge/Version-1.2.1-brightgreen.svg?style=for-the-badge)]()
+[![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1%2FM2%2FM3%2FM4%2FM5-black?style=for-the-badge&logo=apple&logoColor=white)]()
+[![Version](https://img.shields.io/badge/Version-1.2.3-brightgreen.svg?style=for-the-badge)]()
 
 **Geliştirici:** Bahadir Umut Iscimen | 🌍 **[Read in English](README.md)**
 
@@ -25,8 +25,41 @@
 ## 📦 Bu Repoda Neler Var?
 
 * 🐳 **`docker/`** : Wine + QEMU üzerinde çalışan yüksek performanslı MT5 runtime.
+* 🖥 **`docker_kasm/`** : KasmVNC tabanlı MT5 runtime varyantı.
 * 🐍 **`client/`** : Özel Python istemci paketi (`siliconmetatrader5`).
 * 🧪 **`tests/`** : Doğrulama ve bağlantı sağlığı scriptleri.
+
+---
+
+## 🆕 1.2.3 Sürümü
+
+### KasmVNC Runtime Eklendi
+Artık `docker_kasm/` altında ikinci bir runtime varyantı var. Bu varyant aynı `siliconmetatrader5` bridge modelini korur ve eski `x11vnc + noVNC` masaüstü katmanını KasmVNC ile değiştirir.
+
+**Bu varyantı `docker_kasm/` klasöründen çalıştırın:**
+```bash
+cd docker_kasm
+docker compose down -v
+docker compose build
+docker compose up
+```
+
+**Erişim:**
+* 🌐 **KasmVNC arayüzü:** [http://localhost:3000](http://localhost:3000)
+* 🔌 **Bridge:** `localhost:8001`
+
+**Önemli Notlar:**
+* Build aşamasında Wine içi Python, VC runtime ve Python bridge bağımlılıkları kurulur.
+* Runtime aşamasında MetaTrader 5 persistent prefix içine kurulur ve ilk broker login için masaüstü açılır.
+* MT5 durumu, broker login bilgisi ve indirilen history `/config` altında korunur.
+* Build aşamasında `Xvfb` yalnızca Wine installer adımları için kullanılır. Runtime GUI KasmVNC'dir.
+
+### Python Client 1.2.3
+`siliconmetatrader5==1.2.3` güncel client sürümüdür. Bu sürüm, paketlenen bridge server düzenini düzeltir.
+
+```bash
+python3 -m pip install --upgrade siliconmetatrader5==1.2.3
+```
 
 ---
 
@@ -108,7 +141,7 @@ docker compose up --build
 > **Başlatma İçin Önemli Notlar:**
 > * ⏳ **Build Süresi:** İlk kurulum yaklaşık **5-10 dakika** sürebilir.
 > * 🖥 **Arayüzün Açılması:** İlk açılışta siyah ekrandan MT5 arayüzüne geçiş **25-30 dakikayı** bulabilir.
-> * 🌐 **Görsel Erişim:** [http://localhost:6081/vnc.html](http://localhost:6081/vnc.html) adresine gidin (Şifre: `123456`).
+> * 🌐 **Görsel Erişim:** [http://localhost:6081/vnc.html](http://localhost:6081/vnc.html) adresine gidin .
 > * 🔑 **İlk İşlem:** MT5 açıldığında `File > Open an Account` yolunu izleyerek brokerınızı bulun ve bir kez manuel giriş yapın.
 > * 📊 **Veri Senkron Uyarısı:** Broker girişinden sonra geçmiş bar verileri arka planda yüklenir. Test/bot başlatmadan önce **5-10 dakika** bekleyin; ilk dakikalarda `No data` görmek normaldir. `MaxBars` değeri ne kadar büyükse bu ilk senkron süresi o kadar uzayabilir.
 > * ⚠️ **Uyarı:** Colima çalışıyor olsa bile container durdurulursa, yeniden başlatıldığında MT5 tekrar giriş (login) isteyebilir.
@@ -116,7 +149,7 @@ docker compose up --build
 ### 4️⃣ Python İstemcisini (Client) Kur
 Python ortamınızı yeni Docker instance'ına bağlayın:
 ```bash
-python3 -m pip install --upgrade siliconmetatrader5
+python3 -m pip install --upgrade siliconmetatrader5==1.2.3
 ```
 
 ### 5️⃣ Bağlantıyı Test Et
@@ -153,7 +186,7 @@ Xvfb :100 -ac -screen 0 1366x768x24 &
 ### 📊 MT5 Geçmiş Derinliği (MaxBars)
 Ağır backtest işlemleri için daha derin bar geçmişine erişmek isterseniz `docker/mt5cfg.ini` dosyasını düzenleyin:
 ```ini
-MaxBars=5000  # Seçenekler: 500000, 100000, 250000, 500000, 1000000
+MaxBars=100000  # Seçenekler: 5000, 500000, 100000, 250000, 500000, 1000000
 ```
 *(Trade-off: Daha yüksek bellek/depolama kullanımı ve senkronizasyon süresinde hafif uzama.)*
 

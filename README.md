@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 [![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1%2FM2%2FM3%2FM4%2FM5-black?style=for-the-badge&logo=apple&logoColor=white)]()
-[![Version](https://img.shields.io/badge/Version-1.2.1-brightgreen.svg?style=for-the-badge)]()
+[![Version](https://img.shields.io/badge/Version-1.2.3-brightgreen.svg?style=for-the-badge)]()
 
 **Developer:** Bahadir Umut Iscimen | 🇹🇷 **[Türkçe Oku](README_TR.md)**
 
@@ -25,8 +25,41 @@
 ## 📦 What's Inside This Repository?
 
 * 🐳 **`docker/`** : High-performance MT5 runtime built on Wine + QEMU.
+* 🖥 **`docker_kasm/`** : KasmVNC-based MT5 runtime variant.
 * 🐍 **`client/`** : Custom Python client package (`siliconmetatrader5`).
 * 🧪 **`tests/`** : Validation and connection health scripts.
+
+---
+
+## 🆕 Release 1.2.3
+
+### KasmVNC Runtime Added
+A second runtime variant now exists under `docker_kasm/`. This variant keeps the same `siliconmetatrader5` bridge model and replaces the old `x11vnc + noVNC` desktop layer with KasmVNC.
+
+**Use it from the `docker_kasm/` directory:**
+```bash
+cd docker_kasm
+docker compose down -v
+docker compose build
+docker compose up
+```
+
+**Access:**
+* 🌐 **KasmVNC UI:** [http://localhost:3000](http://localhost:3000)
+* 🔌 **Bridge:** `localhost:8001`
+
+**Important Notes:**
+* Build-time installs Wine-side Python, VC runtime, and Python bridge dependencies.
+* Runtime installs MetaTrader 5 into the persistent prefix and opens the desktop for first broker login.
+* MT5 state, broker login, and downloaded history persist in `/config`.
+* Build-time uses `Xvfb` only for Wine installer steps. Runtime GUI is KasmVNC.
+
+### Python Client 1.2.3
+`siliconmetatrader5==1.2.3` is the current client version. This release fixes the packaged bridge server layout.
+
+```bash
+python3 -m pip install --upgrade siliconmetatrader5==1.2.3
+```
 
 ---
 
@@ -108,14 +141,14 @@ docker compose up --build
 > **Key Notes for Initialization:**
 > * ⏳ **Build Time:** The first build takes roughly **5-10 minutes**.
 > * 🖥 **Booting UI:** Transitioning from a black screen to the MT5 interface may take **25-30 minutes** during the very first run.
-> * 🌐 **Visual Access:** Go to [http://localhost:6081/vnc.html](http://localhost:6081/vnc.html) (Password: `123456`).
+> * 🌐 **Visual Access:** Go to [http://localhost:6081/vnc.html](http://localhost:6081/vnc.html) .
 > * 🔑 **First Action:** Navigate to `File > Open an Account`, search for your broker, and log in manually. 
 > * 📊 **Data Sync Warning:** After broker login, historical bars are loaded in the background. Wait **5-10 minutes** before running tests/bots; seeing `No data` in the first minutes is normal. The larger your `MaxBars` value is, the longer this initial sync can take.
 
 ### 4️⃣ Install the Python Client
 Link your Python environment to the new Docker instance:
 ```bash
-python3 -m pip install --upgrade siliconmetatrader5
+python3 -m pip install --upgrade siliconmetatrader5==1.2.3
 ```
 
 ### 5️⃣ Verify Connection
@@ -152,7 +185,7 @@ Xvfb :100 -ac -screen 0 1366x768x24 &
 ### 📊 MT5 History Depth (MaxBars)
 To access deeper bar history for heavy backtesting, edit `docker/mt5cfg.ini`:
 ```ini
-MaxBars=5000  # Options: 500000, 100000, 250000, 500000, 1000000
+MaxBars=100000  # Options: 5000, 500000, 100000, 250000, 500000, 1000000
 ```
 *(Trade-off: Higher memory usage and slightly slower startup sync.)*
 

@@ -5,7 +5,6 @@ services:
     container_name: siliconmt5
     environment:
       - MT5_HOST=0.0.0.0
-      - VNC_PWD=123456
       - TZ=Europe/Istanbul
       - WINEDEBUG=-all
     ports:
@@ -32,6 +31,8 @@ services:
       - seccomp:unconfined
     volumes:
       - wineprefix_persistence:/opt/wineprefix
+      - siliconmt5_logs:/siliconmt5/logs
 
 volumes:
   wineprefix_persistence:
+  siliconmt5_logs:

@@ -2,16 +2,15 @@
 # macOS Silicon Optimized MT5
 # Devoloper: bahadirumutiscimen
 cd /siliconmt5
+mkdir -p /siliconmt5/logs
 
 # Clear existing display locks to prevent startup errors
 rm -rf /tmp/.X100-lock
 
 # Initialize virtual display (Xvfb) and VNC server
 export DISPLAY=:100
-Xvfb :100 -ac -screen 0 1366x768x24 &
-x11vnc -storepasswd $VNC_PWD /siliconmt5/passwd
-x11vnc -display :100 -forever -rfbport 5901 -rfbauth /siliconmt5/passwd -ncache 10 &
-chmod 600 /siliconmt5/passwd
+Xvfb :100 -ac -screen 0 1024x768x16 &
+x11vnc -display :100 -forever -rfbport 5901 -nopw -ncache 10 &
 /siliconmt5/noVNC-master/utils/novnc_proxy --vnc localhost:5901 --listen 6081 &
 
 # Start Openbox Window Manager (Minimalist) - Uncomment to enable
@@ -66,25 +65,25 @@ else
 fi
 
 cd "$MT5_DIR"
-wine terminal64.exe /portable /config:mt5cfg.ini &
+wine terminal64.exe /portable /config:mt5cfg.ini >> /siliconmt5/logs/mt5_runtime.log 2>&1 &
+MT5_PID=$!
 echo "Waiting 15s for MT5 Windows to instantiate..."
 sleep 15
 
 # Start the Silicon Bridge (Python Interface) - v1.0 style
 cd /siliconmt5
-wine python -m siliconmetatrader5 --host "$MT5_HOST" --port 8001 C:/Python/python.exe &
+mkdir -p /siliconmt5/logs
+wine python -m siliconmetatrader5 "C:/Python/python.exe" --host "$MT5_HOST" -p 8001 >> /siliconmt5/logs/bridge_runtime.log 2>&1 &
+BRIDGE_PID=$!
 echo "Waiting 30s for MT5 Silicon to instantiate..."
 sleep 30
-
-# Process Monitor: Ensure critical services stay running (Anti-Crash)
-echo "Starting Watchdog..."
-
 while true
 do
   if ! pgrep -f "terminal64.exe" > /dev/null; then
     echo "⚠️ MT5 process not found! Restarting..."
     cd "$MT5_DIR"
-    wine terminal64.exe /portable /config:mt5cfg.ini &
+    wine terminal64.exe /portable /config:mt5cfg.ini >> /siliconmt5/logs/mt5_runtime.log 2>&1 &
+MT5_PID=$!
     echo "✅ MT5 Restarted."
     sleep 10
   fi
