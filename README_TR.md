@@ -46,7 +46,6 @@ docker compose up
 
 **Erişim:**
 * 🌐 **KasmVNC arayüzü:** [http://localhost:3000](http://localhost:3000)
-* 🔌 **Bridge:** `localhost:8001`
 
 **Önemli Notlar:**
 * Build aşamasında Wine içi Python, VC runtime ve Python bridge bağımlılıkları kurulur.
