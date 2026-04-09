@@ -46,7 +46,6 @@ docker compose up
 
 **Access:**
 * 🌐 **KasmVNC UI:** [http://localhost:3000](http://localhost:3000)
-* 🔌 **Bridge:** `localhost:8001`
 
 **Important Notes:**
 * Build-time installs Wine-side Python, VC runtime, and Python bridge dependencies.
