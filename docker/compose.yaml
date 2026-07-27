@@ -32,6 +32,7 @@ services:
     volumes:
       - wineprefix_persistence:/opt/wineprefix
       - siliconmt5_logs:/siliconmt5/logs
+      - /Users/dima/Downloads/mt5setup.exe:/siliconmt5/mt5setup.exe:ro
 
 volumes:
   wineprefix_persistence:

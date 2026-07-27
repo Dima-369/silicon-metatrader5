@@ -16,16 +16,21 @@ x11vnc -display :100 -forever -rfbport 5901 -nopw -ncache 10 &
 # Start Openbox Window Manager (Minimalist) - Uncomment to enable
 # openbox &
 
-# Check for MT5 installation and install if missing
+# Check for MT5 installation and install if missing.
+# The MetaQuotes CDN installer URL can return HTTP 403 from Docker/Colima. Keep the
+# official installer outside the image and mount it at /siliconmt5/mt5setup.exe.
 if [ ! -f "/opt/wineprefix/drive_c/Program Files/MetaTrader 5/terminal64.exe" ]; then
   echo "Installing MetaTrader 5..."
-  curl -L -o mt5setup.exe https://download.mql5.com/cdn/web/metaquotes.ltd/mt5/mt5setup.exe
-  wine mt5setup.exe /auto
-  # Give the installer enough time to complete
+  INSTALLER=/siliconmt5/mt5setup.exe
+  if [ ! -s "$INSTALLER" ]; then
+    echo "ERROR: valid MT5 installer missing at $INSTALLER"
+    exit 1
+  fi
+  wine "$INSTALLER" /auto
+  # Give the installer enough time to complete.
   echo "Waiting for MT5 install..."
   sleep 20
   wine taskkill /IM "terminal64.exe" /F || true
-  rm mt5setup.exe
 fi
 
 # Locate and launch MetaTrader 5
