@@ -125,12 +125,12 @@ def observe(
     history_bars = max(0, min(int(request.get("history_bars", bars)), 10_000))
     tick_seconds = max(60, min(int(request.get("tick_seconds", 3600)), 86_400))
     history_days = max(1, min(int(request.get("history_days", 7)), 365))
-    now_epoch = int(time.time())
+    query_epoch = int(time.time())
     # MT5's bridge labels timestamps in broker-server time (currently UTC+3),
     # while `time.time()` is UTC. Date-range APIs must receive server-labelled
     # epochs or they return a window offset by the calibration amount. Keep the
     # observation timestamp itself in host UTC; only MT5 query bounds use this.
-    now_server_epoch = now_epoch + server_offset_seconds
+    now_server_epoch = query_epoch + server_offset_seconds
     history_from = now_server_epoch - history_days * 86_400
 
     account = plain(mt5.account_info())
@@ -217,9 +217,10 @@ def observe(
                 except (TypeError, ValueError):
                     pass
 
+    observed_at_epoch = int(time.time())
     return {
-        "observed_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
-        "observed_at_epoch": now_epoch,
+        "observed_at_utc": epoch_utc(observed_at_epoch, 0),
+        "observed_at_epoch": observed_at_epoch,
         "server_offset_seconds": server_offset_seconds,
         "account": account,
         "terminal": terminal,
