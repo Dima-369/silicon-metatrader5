@@ -126,7 +126,12 @@ def observe(
     tick_seconds = max(60, min(int(request.get("tick_seconds", 3600)), 86_400))
     history_days = max(1, min(int(request.get("history_days", 7)), 365))
     now_epoch = int(time.time())
-    history_from = now_epoch - history_days * 86_400
+    # MT5's bridge labels timestamps in broker-server time (currently UTC+3),
+    # while `time.time()` is UTC. Date-range APIs must receive server-labelled
+    # epochs or they return a window offset by the calibration amount. Keep the
+    # observation timestamp itself in host UTC; only MT5 query bounds use this.
+    now_server_epoch = now_epoch + server_offset_seconds
+    history_from = now_server_epoch - history_days * 86_400
 
     account = plain(mt5.account_info())
     terminal = plain(mt5.terminal_info())
@@ -143,8 +148,8 @@ def observe(
         ticks = (
             mt5.copy_ticks_range(
                 symbol,
-                now_epoch - tick_seconds,
-                now_epoch,
+                now_server_epoch - tick_seconds,
+                now_server_epoch,
                 mt5.COPY_TICKS_ALL,
             )
             if selected
@@ -178,14 +183,14 @@ def observe(
     positions, positions_error = call_rows(mt5.positions_get)
     orders, orders_error = call_rows(mt5.orders_get)
     try:
-        history_orders_raw = mt5.history_orders_get(history_from, now_epoch)
+        history_orders_raw = mt5.history_orders_get(history_from, now_server_epoch)
         history_orders = row_dicts(history_orders_raw)
         history_orders_error = None
     except Exception as exc:
         history_orders = []
         history_orders_error = {"type": type(exc).__name__, "message": str(exc)}
     try:
-        history_deals_raw = mt5.history_deals_get(history_from, now_epoch)
+        history_deals_raw = mt5.history_deals_get(history_from, now_server_epoch)
         history_deals = row_dicts(history_deals_raw)
         history_deals_error = None
     except Exception as exc:
