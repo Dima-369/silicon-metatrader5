@@ -122,6 +122,7 @@ def observe(
 ) -> dict[str, Any]:
     symbols = request.get("symbols") or ["EURUSD"]
     bars = max(1, min(int(request.get("bars", 300)), 10_000))
+    history_bars = max(0, min(int(request.get("history_bars", bars)), 10_000))
     tick_seconds = max(60, min(int(request.get("tick_seconds", 3600)), 86_400))
     history_days = max(1, min(int(request.get("history_days", 7)), 365))
     now_epoch = int(time.time())
@@ -149,7 +150,16 @@ def observe(
             if selected
             else None
         )
+        history_rates = (
+            mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M5, bars, history_bars)
+            if selected and history_bars
+            else None
+        )
         rate_rows = [normalize_rate(row, server_offset_seconds) for row in row_dicts(rates)]
+        history_rate_rows = [
+            normalize_rate(row, server_offset_seconds)
+            for row in row_dicts(history_rates)
+        ]
         tick_rows = [normalize_tick(row, server_offset_seconds) for row in row_dicts(ticks)]
         current_tick = normalize_tick(tick, server_offset_seconds) if isinstance(tick, dict) else None
         symbol_rows.append(
@@ -160,6 +170,7 @@ def observe(
                 "info": info,
                 "tick": current_tick,
                 "rates_m5": rate_rows,
+                "history_rates_m5": history_rate_rows,
                 "ticks": tick_rows,
             }
         )
