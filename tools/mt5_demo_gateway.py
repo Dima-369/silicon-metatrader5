@@ -98,8 +98,8 @@ def require_demo_account(mt5: MetaTrader5, args: argparse.Namespace) -> dict[str
         raise RuntimeError("MT5 terminal is not connected")
     if terminal.get("trade_allowed") is not True:
         raise RuntimeError("MT5 terminal does not allow trading")
-    if account.get("trade_allowed") is False:
-        raise RuntimeError("MT5 account does not allow trading")
+    if account.get("trade_allowed") is not True:
+        raise RuntimeError("MT5 account does not explicitly allow trading")
     return account
 
 
@@ -118,13 +118,35 @@ def require_number(request: dict[str, Any], key: str, positive: bool = False) ->
     return value
 
 
+def invoke_trade_call(mt5: MetaTrader5, method: str, request: dict[str, Any]) -> Any:
+    # siliconmetatrader5 1.2.3 exposes order_check(*args, **kwargs), but the
+    # MT5 terminal accepts the MqlTradeRequest only as a positional argument.
+    # Keyword form returns an invalid empty request on this bridge. Keep the
+    # private-connection escape hatch inside this guarded gateway only; no
+    # generic operation is exposed to callers.
+    connection = getattr(mt5, "_MetaTrader5__conn", None)
+    if connection is None:
+        raise RuntimeError("MT5 bridge does not expose its trade connection")
+    if method not in {"order_check", "order_send"}:
+        raise RuntimeError(f"unsupported guarded trade method: {method}")
+    return connection.eval(f"mt5.{method}({request!r})")
+
+
+def invoke_order_check(mt5: MetaTrader5, request: dict[str, Any]) -> Any:
+    return invoke_trade_call(mt5, "order_check", request)
+
+
+def invoke_order_send(mt5: MetaTrader5, request: dict[str, Any]) -> Any:
+    return invoke_trade_call(mt5, "order_send", request)
+
+
 def check_and_send(
     mt5: MetaTrader5,
     request: dict[str, Any],
     args: argparse.Namespace,
     require_margin: bool,
 ) -> dict[str, Any]:
-    checked = plain(mt5.order_check(request))
+    checked = plain(invoke_order_check(mt5, request))
     if not isinstance(checked, dict):
         raise RuntimeError("order_check returned no structured result")
     check_code = checked.get("retcode")
@@ -148,7 +170,7 @@ def check_and_send(
                 "sent": False,
                 "error": "margin cap exceeded",
             }
-    sent = plain(mt5.order_send(request))
+    sent = plain(invoke_order_send(mt5, request))
     if not isinstance(sent, dict):
         return {
             "check": checked,
@@ -229,7 +251,11 @@ def place_order(mt5: MetaTrader5, request: dict[str, Any], args: argparse.Namesp
         "magic": magic,
         "comment": comment,
         "type_time": int(request.get("type_time", ORDER_TIME_SPECIFIED)),
-        "expiration": expiration,
+        # Rust request epochs are UTC; MT5 trade requests expect the broker's
+        # server epoch (currently UTC+3 on FundingPips-Trial).
+        "expiration": expiration + args.server_offset_seconds
+        if int(request.get("type_time", ORDER_TIME_SPECIFIED)) != ORDER_TIME_GTC
+        else 0,
         # Pending orders use RETURN filling. The broker's symbol filling mask is
         # checked by order_check; Rust never skips that preflight.
         "type_filling": ORDER_FILLING_RETURN,
@@ -328,6 +354,7 @@ def main() -> int:
     parser.add_argument("--max-volume", type=float, default=0.01)
     parser.add_argument("--max-margin", type=float, default=100.0)
     parser.add_argument("--max-order-age-seconds", type=int, default=3600)
+    parser.add_argument("--server-offset-seconds", type=int, default=10_800)
     parser.add_argument("--allow-demo-orders", action="store_true")
     args = parser.parse_args()
     if not args.allow_demo_orders:
