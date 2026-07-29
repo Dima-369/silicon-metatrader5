@@ -30,6 +30,8 @@ TRADE_ACTION_PENDING = 5
 TRADE_ACTION_REMOVE = 8
 ORDER_TYPE_BUY = 0
 ORDER_TYPE_SELL = 1
+ORDER_FILLING_FOK = 0
+ORDER_FILLING_IOC = 1
 ORDER_FILLING_RETURN = 2
 ORDER_TIME_GTC = 0
 ORDER_TIME_SPECIFIED = 2
@@ -138,6 +140,18 @@ def invoke_order_check(mt5: MetaTrader5, request: dict[str, Any]) -> Any:
 
 def invoke_order_send(mt5: MetaTrader5, request: dict[str, Any]) -> Any:
     return invoke_trade_call(mt5, "order_send", request)
+
+
+def executable_filling_modes(mt5: MetaTrader5, symbol: str) -> list[int]:
+    info = plain(mt5.symbol_info(symbol)) or {}
+    mask = info.get("filling_mode")
+    if isinstance(mask, int):
+        modes = [mode for mode in (ORDER_FILLING_FOK, ORDER_FILLING_IOC, ORDER_FILLING_RETURN) if mask & (1 << mode)]
+        if modes:
+            return modes
+    # FundingPips FX currently accepts FOK/IOC for market closes. Pending
+    # brackets still use RETURN as required by MT5 for pending orders.
+    return [ORDER_FILLING_FOK, ORDER_FILLING_IOC]
 
 
 def check_and_send(
@@ -316,7 +330,7 @@ def flatten(mt5: MetaTrader5, request: dict[str, Any], args: argparse.Namespace)
         if not isinstance(price, (int, float)) or float(price) <= 0:
             actions.append({"kind": "close", "ticket": ticket, "sent": False, "error": "no executable tick"})
             continue
-        close = {
+        close_base = {
             "action": TRADE_ACTION_DEAL,
             "symbol": symbol,
             "volume": float(volume),
@@ -327,9 +341,15 @@ def flatten(mt5: MetaTrader5, request: dict[str, Any], args: argparse.Namespace)
             "magic": magic,
             "comment": f"{prefix}-flatten",
             "type_time": ORDER_TIME_GTC,
-            "type_filling": ORDER_FILLING_RETURN,
         }
-        actions.append({"kind": "close", "ticket": ticket, **check_and_send(mt5, close, args, False)})
+        close_result = None
+        for filling in executable_filling_modes(mt5, symbol):
+            close = {**close_base, "type_filling": filling}
+            close_result = check_and_send(mt5, close, args, False)
+            check = close_result.get("check") or {}
+            if check.get("retcode") != 10030:
+                break
+        actions.append({"kind": "close", "ticket": ticket, **(close_result or {"sent": False, "error": "no filling mode"})})
     return {"operation": "demo_flatten", "actions": actions}
 
 
