@@ -3,12 +3,19 @@
 
 This is separate from ``mt5_gateway.py`` on purpose. The normal observer remains
 read-only. Rust must start this process with ``--allow-demo-orders`` and the exact
-FundingPips demo login/server; this process still accepts only the two narrow
+FundingPips demo login/server; this process still accepts only the four narrow
 operations below:
 
 * ``demo_place_order``: pending bracket order after ``order_check`` succeeds;
 * ``demo_flatten``: remove/close only orders and positions carrying our magic AND
-  comment prefix.
+  comment prefix;
+* ``demo_partial_close``: close part of an owned open position (the rest stays
+  open) -- same ownership check as ``demo_flatten``, but by explicit ticket and
+  strictly less than the full position volume (use ``demo_flatten`` for a full
+  close);
+* ``demo_modify_position``: move an owned open position's SL/TP (breakeven arm,
+  runner trail, or the partial-bank's stop+target update) -- same ownership
+  check, ticket-scoped.
 
 No generic ``order_send`` operation is exposed.
 """
@@ -27,6 +34,7 @@ from siliconmetatrader5 import MetaTrader5
 CONFIRMATION = "FUNDINGPIPS-DEMO-ONLY"
 TRADE_ACTION_DEAL = 1
 TRADE_ACTION_PENDING = 5
+TRADE_ACTION_SLTP = 6
 TRADE_ACTION_REMOVE = 8
 ORDER_TYPE_BUY = 0
 ORDER_TYPE_SELL = 1
@@ -285,6 +293,143 @@ def ours(row: dict[str, Any], magic: int, prefix: str) -> bool:
     return row.get("magic") == magic and str(row.get("comment", "")).startswith(prefix)
 
 
+def find_owned_position(
+    mt5: MetaTrader5, ticket: int, symbol: str, magic: int, prefix: str
+) -> dict[str, Any]:
+    """Looks up an open position by ticket and refuses anything we don't own --
+    shared by ``demo_partial_close``/``demo_modify_position`` so neither can ever
+    act on a position outside our own magic+comment-prefix, regardless of what
+    ticket a caller (or a bug) passes in."""
+    position = next(
+        (p for p in row_dicts(mt5.positions_get()) if p.get("ticket") == ticket),
+        None,
+    )
+    if position is None:
+        raise RuntimeError(f"no open position for ticket {ticket}")
+    if not ours(position, magic, prefix):
+        raise RuntimeError(f"refusing to act on a position we don't own: ticket {ticket}")
+    if position.get("symbol") != symbol:
+        raise RuntimeError("symbol does not match the open position")
+    return position
+
+
+def close_volume(
+    mt5: MetaTrader5,
+    position: dict[str, Any],
+    volume: float,
+    args: argparse.Namespace,
+    magic: int,
+    comment: str,
+) -> dict[str, Any]:
+    """Sends a TRADE_ACTION_DEAL market close for exactly ``volume`` lots of an
+    already-owned ``position`` (full close from ``flatten``, or a smaller partial
+    from ``demo_partial_close``) -- the filling-mode retry loop is the same either
+    way, so this is the one place that logic lives."""
+    symbol = position.get("symbol")
+    ticket = position.get("ticket")
+    if not isinstance(symbol, str) or not isinstance(ticket, int):
+        return {"sent": False, "error": "position missing symbol/ticket"}
+    tick = plain(mt5.symbol_info_tick(symbol)) or {}
+    bid = tick.get("bid")
+    ask = tick.get("ask")
+    position_type = position.get("type")
+    price = bid if position_type == ORDER_TYPE_BUY else ask
+    close_type = ORDER_TYPE_SELL if position_type == ORDER_TYPE_BUY else ORDER_TYPE_BUY
+    if not isinstance(price, (int, float)) or float(price) <= 0:
+        return {"sent": False, "error": "no executable tick"}
+    close_base = {
+        "action": TRADE_ACTION_DEAL,
+        "symbol": symbol,
+        "volume": float(volume),
+        "type": close_type,
+        "position": ticket,
+        "price": float(price),
+        "deviation": 5,
+        "magic": magic,
+        "comment": comment,
+        "type_time": ORDER_TIME_GTC,
+    }
+    close_result = None
+    for filling in executable_filling_modes(mt5, symbol):
+        close = {**close_base, "type_filling": filling}
+        close_result = check_and_send(mt5, close, args, False)
+        check = close_result.get("check") or {}
+        if check.get("retcode") != 10030:
+            break
+    return close_result or {"sent": False, "error": "no filling mode"}
+
+
+def demo_partial_close(mt5: MetaTrader5, request: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    require_confirmation(request)
+    require_demo_account(mt5, args)
+    ticket = request.get("ticket")
+    if not isinstance(ticket, int) or ticket <= 0:
+        raise RuntimeError("positive ticket is required")
+    symbol = request.get("symbol")
+    if not isinstance(symbol, str) or symbol not in args.allowed_symbols:
+        raise RuntimeError(f"symbol is not allowlisted: {symbol!r}")
+    volume = require_number(request, "volume", positive=True)
+    magic = args.expected_magic
+    prefix = args.comment_prefix
+    position = find_owned_position(mt5, ticket, symbol, magic, prefix)
+    position_volume = position.get("volume")
+    if not isinstance(position_volume, (int, float)):
+        raise RuntimeError("position volume is unavailable")
+    if volume >= float(position_volume):
+        raise RuntimeError(
+            "partial-close volume must be less than the full position volume; "
+            "use demo_flatten for a full close"
+        )
+    result = close_volume(mt5, position, volume, args, magic, f"{prefix}-partial")
+    return {"operation": "demo_partial_close", "ticket": ticket, **result}
+
+
+def demo_modify_position(mt5: MetaTrader5, request: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    require_confirmation(request)
+    require_demo_account(mt5, args)
+    ticket = request.get("ticket")
+    if not isinstance(ticket, int) or ticket <= 0:
+        raise RuntimeError("positive ticket is required")
+    symbol = request.get("symbol")
+    if not isinstance(symbol, str) or symbol not in args.allowed_symbols:
+        raise RuntimeError(f"symbol is not allowlisted: {symbol!r}")
+    sl = require_number(request, "sl", positive=True)
+    tp = require_number(request, "tp", positive=True)
+    magic = args.expected_magic
+    prefix = args.comment_prefix
+    position = find_owned_position(mt5, ticket, symbol, magic, prefix)
+    position_type = position.get("type")
+    # Same bracket-direction sanity check `place_order` applies to a fresh
+    # order: a modify that would put the stop on the wrong side of price (or
+    # invert sl/tp) is almost certainly a caller bug, not something MT5 should
+    # be asked to accept. Skipped only if the current tick is unavailable --
+    # `order_check` still gets the final say either way.
+    tick = plain(mt5.symbol_info_tick(symbol)) or {}
+    current = tick.get("bid") if position_type == ORDER_TYPE_BUY else tick.get("ask")
+    if isinstance(current, (int, float)):
+        # <=/>= (not strict <): a legitimate breakeven-arm or trail update can
+        # land exactly on the current tick during a fast market, and rejecting
+        # that here would just force an identical retry next cycle anyway --
+        # `order_check` still gets the final say on anything genuinely invalid.
+        if position_type == ORDER_TYPE_BUY and not sl <= float(current) <= tp:
+            raise RuntimeError("buy position modify must satisfy sl <= current_price <= tp")
+        if position_type == ORDER_TYPE_SELL and not tp <= float(current) <= sl:
+            raise RuntimeError("sell position modify must satisfy tp <= current_price <= sl")
+    normalized = {
+        "action": TRADE_ACTION_SLTP,
+        "symbol": symbol,
+        "position": ticket,
+        "sl": sl,
+        "tp": tp,
+        "magic": magic,
+    }
+    return {
+        "operation": "demo_modify_position",
+        "ticket": ticket,
+        **check_and_send(mt5, normalized, args, False),
+    }
+
+
 def flatten(mt5: MetaTrader5, request: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     require_confirmation(request)
     require_demo_account(mt5, args)
@@ -316,40 +461,12 @@ def flatten(mt5: MetaTrader5, request: dict[str, Any], args: argparse.Namespace)
     for position in row_dicts(mt5.positions_get()):
         if not ours(position, magic, prefix) or position.get("symbol") not in args.allowed_symbols:
             continue
-        symbol = position.get("symbol")
         ticket = position.get("ticket")
         volume = position.get("volume")
-        if not isinstance(symbol, str) or not isinstance(ticket, int) or not isinstance(volume, (int, float)):
+        if not isinstance(ticket, int) or not isinstance(volume, (int, float)):
             continue
-        tick = plain(mt5.symbol_info_tick(symbol)) or {}
-        bid = tick.get("bid")
-        ask = tick.get("ask")
-        position_type = position.get("type")
-        price = bid if position_type == ORDER_TYPE_BUY else ask
-        close_type = ORDER_TYPE_SELL if position_type == ORDER_TYPE_BUY else ORDER_TYPE_BUY
-        if not isinstance(price, (int, float)) or float(price) <= 0:
-            actions.append({"kind": "close", "ticket": ticket, "sent": False, "error": "no executable tick"})
-            continue
-        close_base = {
-            "action": TRADE_ACTION_DEAL,
-            "symbol": symbol,
-            "volume": float(volume),
-            "type": close_type,
-            "position": ticket,
-            "price": float(price),
-            "deviation": 5,
-            "magic": magic,
-            "comment": f"{prefix}-flatten",
-            "type_time": ORDER_TIME_GTC,
-        }
-        close_result = None
-        for filling in executable_filling_modes(mt5, symbol):
-            close = {**close_base, "type_filling": filling}
-            close_result = check_and_send(mt5, close, args, False)
-            check = close_result.get("check") or {}
-            if check.get("retcode") != 10030:
-                break
-        actions.append({"kind": "close", "ticket": ticket, **(close_result or {"sent": False, "error": "no filling mode"})})
+        result = close_volume(mt5, position, float(volume), args, magic, f"{prefix}-flatten")
+        actions.append({"kind": "close", "ticket": ticket, **result})
     return {"operation": "demo_flatten", "actions": actions}
 
 
@@ -398,8 +515,15 @@ def main() -> int:
                     result = place_order(mt5, request.get("order") or {}, args)
                 elif operation == "demo_flatten":
                     result = flatten(mt5, request, args)
+                elif operation == "demo_partial_close":
+                    result = demo_partial_close(mt5, request, args)
+                elif operation == "demo_modify_position":
+                    result = demo_modify_position(mt5, request, args)
                 else:
-                    raise ValueError("only demo_place_order and demo_flatten are supported")
+                    raise ValueError(
+                        "only demo_place_order, demo_flatten, demo_partial_close, "
+                        "and demo_modify_position are supported"
+                    )
                 response(request_id, result=result)
             except Exception as exc:
                 response(

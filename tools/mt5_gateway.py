@@ -327,6 +327,24 @@ def observe_account(mt5: MetaTrader5, server_offset_seconds: int) -> dict[str, A
     }
 
 
+def observe_symbols(
+    mt5: MetaTrader5, server_offset_seconds: int, group: str | None
+) -> dict[str, Any]:
+    diagnostics: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    total = timed_call(diagnostics, errors, "symbols_total", mt5.symbols_total)
+    fetch = (lambda: mt5.symbols_get(group)) if group else mt5.symbols_get
+    rows, rows_error = safe_rows(diagnostics, errors, "symbols_get", fetch)
+    return {
+        **observation_clock(server_offset_seconds),
+        "symbols_total": plain(total),
+        "symbols": rows,
+        "symbols_error": rows_error,
+        "errors": errors,
+        "diagnostics": diagnostics,
+    }
+
+
 def observe_open(mt5: MetaTrader5, server_offset_seconds: int) -> dict[str, Any]:
     diagnostics: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
@@ -540,10 +558,16 @@ def main() -> int:
                 elif op == "observe_history":
                     _, _, _, history_days = request_params(request)
                     result = observe_history(mt5, history_days, args.server_offset_seconds)
+                elif op == "list_symbols":
+                    group = request.get("group")
+                    result = observe_symbols(
+                        mt5, args.server_offset_seconds, str(group) if group else None
+                    )
                 else:
                     raise ValueError(
                         "only read-only observe, observe_account, observe_symbol, "
-                        "observe_open, and observe_history operations are supported"
+                        "observe_open, observe_history, and list_symbols operations "
+                        "are supported"
                     )
                 response(request_id, result=result)
             except Exception as exc:
