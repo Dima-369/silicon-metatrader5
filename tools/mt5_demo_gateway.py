@@ -3,7 +3,7 @@
 
 This is separate from ``mt5_gateway.py`` on purpose. The normal observer remains
 read-only. Rust must start this process with ``--allow-demo-orders`` and the exact
-FundingPips demo login/server; this process still accepts only the four narrow
+FundingPips demo login/server; this process still accepts only the five narrow
 operations below:
 
 * ``demo_place_order``: pending bracket order after ``order_check`` succeeds;
@@ -11,8 +11,14 @@ operations below:
   comment prefix;
 * ``demo_partial_close``: close part of an owned open position (the rest stays
   open) -- same ownership check as ``demo_flatten``, but by explicit ticket and
-  strictly less than the full position volume (use ``demo_flatten`` for a full
-  close);
+  strictly less than the full position volume (use ``demo_close_position`` or
+  ``demo_flatten`` for a full close);
+* ``demo_close_position``: fully close ONE owned open position by ticket, for
+  exactly its current volume -- same ownership check, scoped to a single ticket.
+  Added 2026-08-03 to fix a real bug: `trader.rs`'s `check_striking_system`
+  emergency close used to call `demo_partial_close` with a position's full
+  remaining volume, which this gateway's own full-volume guard always rejected
+  -- a live strike breach never actually closed the position;
 * ``demo_modify_position``: move an owned open position's SL/TP (breakeven arm,
   runner trail, or the partial-bank's stop+target update) -- same ownership
   check, ticket-scoped.
@@ -384,6 +390,37 @@ def demo_partial_close(mt5: MetaTrader5, request: dict[str, Any], args: argparse
     return {"operation": "demo_partial_close", "ticket": ticket, **result}
 
 
+def demo_close_position(mt5: MetaTrader5, request: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    """Fully closes an already-owned open position by ticket, for exactly its
+    current full volume -- the caller never supplies a volume. Added 2026-08-03:
+    `demo_partial_close` deliberately REJECTS a full-volume close ("use
+    demo_flatten for a full close"), but `demo_flatten` closes EVERY owned
+    order/position, not just one -- unusable for a single-position emergency
+    close (the Rust side's striking-system check) or a single leg's own
+    force-close deadline when other unrelated positions are still legitimately
+    open. `trader.rs`'s `check_striking_system` used to call `demo_partial_close`
+    with a position's full remaining volume, which this gateway's own guard
+    always rejected -- a live strike breach never actually closed the position.
+    This op is the fix; see `Mt5DemoGateway::close_position`'s doc comment in
+    the main repo's `crates/tradebot-broker/src/mt5.rs`."""
+    require_confirmation(request)
+    require_demo_account(mt5, args)
+    ticket = request.get("ticket")
+    if not isinstance(ticket, int) or ticket <= 0:
+        raise RuntimeError("positive ticket is required")
+    symbol = request.get("symbol")
+    if not isinstance(symbol, str) or symbol not in args.allowed_symbols:
+        raise RuntimeError(f"symbol is not allowlisted: {symbol!r}")
+    magic = args.expected_magic
+    prefix = args.comment_prefix
+    position = find_owned_position(mt5, ticket, symbol, magic, prefix)
+    position_volume = position.get("volume")
+    if not isinstance(position_volume, (int, float)) or float(position_volume) <= 0:
+        raise RuntimeError("position volume is unavailable")
+    result = close_volume(mt5, position, float(position_volume), args, magic, f"{prefix}-close")
+    return {"operation": "demo_close_position", "ticket": ticket, **result}
+
+
 def demo_modify_position(mt5: MetaTrader5, request: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     require_confirmation(request)
     require_demo_account(mt5, args)
@@ -517,12 +554,14 @@ def main() -> int:
                     result = flatten(mt5, request, args)
                 elif operation == "demo_partial_close":
                     result = demo_partial_close(mt5, request, args)
+                elif operation == "demo_close_position":
+                    result = demo_close_position(mt5, request, args)
                 elif operation == "demo_modify_position":
                     result = demo_modify_position(mt5, request, args)
                 else:
                     raise ValueError(
                         "only demo_place_order, demo_flatten, demo_partial_close, "
-                        "and demo_modify_position are supported"
+                        "demo_close_position, and demo_modify_position are supported"
                     )
                 response(request_id, result=result)
             except Exception as exc:
