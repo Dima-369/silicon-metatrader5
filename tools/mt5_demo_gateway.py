@@ -384,7 +384,7 @@ def demo_partial_close(mt5: MetaTrader5, request: dict[str, Any], args: argparse
     if volume >= float(position_volume):
         raise RuntimeError(
             "partial-close volume must be less than the full position volume; "
-            "use demo_flatten for a full close"
+            "use demo_close_position or demo_flatten for a full close"
         )
     result = close_volume(mt5, position, volume, args, magic, f"{prefix}-partial")
     return {"operation": "demo_partial_close", "ticket": ticket, **result}
